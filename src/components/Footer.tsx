@@ -34,8 +34,8 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <img src={logo} alt="TerraForge" className="h-8 rounded" />
+            <Link to="/" className="inline-block mb-4">
+              <img src={logo} alt="TerraForge" className="h-[70px] rounded-lg" />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               AI-powered mineral intelligence for smarter exploration decisions.

@@ -21,13 +21,10 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-deep-space/80 backdrop-blur-xl">
-      <div className="container-tight flex h-16 items-center justify-between">
+      <div className="container-tight flex h-20 items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0">
-          <img src={logo} alt="TerraForge" className="h-8 w-auto rounded" />
-          <span className="text-lg font-bold tracking-tight text-foreground hidden sm:inline">
-            Terra<span className="text-forge-orange">Forge</span>
-          </span>
+        <Link to="/" className="shrink-0">
+          <img src={logo} alt="TerraForge" className="h-[60px] w-auto rounded-lg" />
         </Link>
 
         {/* Desktop Nav */}

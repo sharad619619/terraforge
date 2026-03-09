@@ -28,14 +28,16 @@ function Hero() {
       <div className="container-tight relative">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-            <div className="inline-flex items-center gap-2 glass-card px-3 py-1.5 mb-6 text-xs font-medium text-muted-foreground">
-              <Zap size={12} className="text-forge-orange" />
-              AI-Powered Geospatial Intelligence
-            </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-[64px] font-bold leading-[1.08] tracking-tight mb-6 text-balance">
+            {/* Large Brand Name */}
+            <h1 className="text-6xl sm:text-7xl lg:text-[84px] font-bold leading-[1] tracking-tight mb-4">
+              <span className="bg-gradient-to-r from-geo-blue via-forge-orange to-geo-blue bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+                TerraForge
+              </span>
+            </h1>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight mb-6 text-balance">
               AI-Powered Mineral Intelligence for{" "}
               <span className="gradient-text">Smarter Drilling Decisions</span>
-            </h1>
+            </h2>
             <p className="text-lg text-muted-foreground leading-relaxed max-w-lg mb-8">
               TerraForge AI transforms satellite imagery, geological layers, and terrain models into high-probability mineral predictions before expensive drilling operations begin.
             </p>
