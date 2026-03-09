@@ -232,7 +232,7 @@ export default function Platform() {
                   <input type="file" multiple accept={ACCEPTED_TYPES.join(",")} onChange={handleFileSelect} className="hidden" />
                   <Upload size={20} className="mx-auto mb-1 text-muted-foreground" />
                   <p className="text-xs text-muted-foreground">GeoJSON, CSV, TIFF, Shapefile (ZIP)</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-1">Max 50MB per file</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">Max 20MB per file</p>
                 </label>
 
                 {files.length > 0 && (
