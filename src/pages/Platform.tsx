@@ -42,6 +42,41 @@ interface AnalysisResult {
 const ACCEPTED_TYPES = [".geojson", ".csv", ".tif", ".tiff", ".zip", ".json"];
 const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
+function classifyProbability(probability: number): "High" | "Medium" | "Low" {
+  if (probability >= 0.75) return "High";
+  if (probability >= 0.4) return "Medium";
+  return "Low";
+}
+
+function getClassificationColor(classification: string): string {
+  if (classification === "High") return "text-emerald-400";
+  if (classification === "Medium") return "text-amber-400";
+  return "text-red-400";
+}
+
+function getNormalizedFactors(zone: any): ZoneFactors {
+  const raw = zone?.factors;
+
+  if (raw && typeof raw === "object") {
+    const terrain = Number(raw.terrain ?? 0);
+    const spectral = Number(raw.spectral ?? 0);
+    const geology = Number(raw.geology ?? 0);
+    const historical = Number(raw.historical ?? 0);
+    const sum = terrain + spectral + geology + historical;
+
+    if (sum > 0) {
+      return {
+        terrain: terrain / sum,
+        spectral: spectral / sum,
+        geology: geology / sum,
+        historical: historical / sum,
+      };
+    }
+  }
+
+  return { terrain: 0.31, geology: 0.28, spectral: 0.24, historical: 0.17 };
+}
+
 export default function Platform() {
   const [files, setFiles] = useState<File[]>([]);
   const [mineral, setMineral] = useState("Lithium");
