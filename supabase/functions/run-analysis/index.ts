@@ -137,12 +137,13 @@ Deno.serve(async (req) => {
 
     const zones: any[] = [];
     const geojsonFeatures: any[] = [];
+    const predictionRows: any[] = [];
 
     for (let i = 0; i < validFeatures.length; i++) {
       const feature = validFeatures[i];
       const properties = feature.properties || {};
 
-      const zoneId = String(properties.zone_id || properties.id || `ZONE-${String(i + 1).padStart(2, "0")}`);
+      const zoneId = String(properties.zone_id || properties.id || `ZONE-${String(i + 1).padStart(3, "0")}`);
       const state = String(properties.state || properties.region || "Unknown");
       const mineral = String(properties.mineral || target_mineral);
 
@@ -186,7 +187,7 @@ Deno.serve(async (req) => {
 
       zones.push(zoneData);
 
-      await supabase.from("prediction_zones").insert({
+      predictionRows.push({
         analysis_run_id: run.id,
         zone_id: zoneId,
         probability,
@@ -208,6 +209,13 @@ Deno.serve(async (req) => {
           target_mineral: target_mineral,
         },
       });
+    }
+
+    // Batch insert all prediction zones at once for performance
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < predictionRows.length; i += BATCH_SIZE) {
+      const batch = predictionRows.slice(i, i + BATCH_SIZE);
+      await supabase.from("prediction_zones").insert(batch);
     }
 
     const geojson = { type: "FeatureCollection", features: geojsonFeatures };
