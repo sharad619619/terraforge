@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
 import logo from "@/assets/terraforge-logo.jpeg";
-import { User } from "lucide-react";
+import founderImage from "@/assets/founder-sharad.jpeg";
 
 const fade = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } };
 
@@ -61,27 +61,39 @@ export default function About() {
               />
 
               {/* Avatar */}
-              <div className="relative mx-auto mb-6 w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-border/50 bg-secondary flex items-center justify-center overflow-hidden"
-                style={{ boxShadow: "0 0 24px rgba(31,79,255,0.25), 0 0 8px rgba(255,122,26,0.15)" }}
+              <div className="relative mx-auto w-36 h-36 sm:w-40 sm:h-40 rounded-full overflow-hidden"
+                style={{ 
+                  boxShadow: "0 0 30px rgba(31,79,255,0.3), 0 0 12px rgba(255,122,26,0.2)",
+                  border: "3px solid rgba(255,255,255,0.1)"
+                }}
               >
-                <User size={52} className="text-muted-foreground" />
+                <img src={founderImage} alt="Sharad Singh" className="w-full h-full object-cover" />
               </div>
 
               {/* Name */}
-              <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-1">
+              <h3 className="mt-5 text-[32px] sm:text-[36px] font-bold tracking-tight text-foreground mb-2">
                 Sharad Singh
               </h3>
 
               {/* Designation */}
-              <p className="text-sm font-semibold text-forge-orange mb-6 uppercase tracking-widest">
+              <p className="text-sm sm:text-base font-semibold uppercase tracking-widest mb-5" style={{ color: "#FF7A1A" }}>
                 Founder &amp; CEO
               </p>
 
               {/* Divider */}
-              <div className="w-16 h-px mx-auto mb-6 bg-gradient-to-r from-geo-blue to-forge-orange opacity-60" />
+              <div className="w-16 h-px mx-auto mb-5 bg-gradient-to-r from-geo-blue to-forge-orange opacity-60" />
 
               {/* Bio */}
-              <p className="text-muted-foreground leading-relaxed text-base max-w-lg mx-auto">
+              <p 
+                className="mx-auto"
+                style={{ 
+                  textAlign: "justify",
+                  maxWidth: "650px",
+                  lineHeight: 1.7,
+                  fontSize: "17px",
+                  color: "#E5E7EB"
+                }}
+              >
                 Sharad Singh is a visionary entrepreneur focused on solving real-world problems through technology. He is passionate about building next-generation platforms that combine artificial intelligence, geospatial intelligence, and data-driven decision systems. Through TerraForge, he aims to transform how mineral and natural resource exploration is conducted by using AI-powered geospatial analysis to reduce exploration risk and enable smarter drilling decisions.
               </p>
 
