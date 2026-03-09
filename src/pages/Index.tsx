@@ -163,44 +163,123 @@ function Problem() {
 /* ---------- Solution ---------- */
 function Solution() {
   const inputs = [
-    "Satellite Imagery", "Geological Maps", "DEM Terrain Data", "Historical Exploration Data"
+    { icon: Globe, label: "Satellite Imagery" },
+    { icon: MapPin, label: "Geological Maps" },
+    { icon: Layers, label: "DEM Terrain Data" },
+    { icon: Database, label: "Historical Exploration Data" },
   ];
   const outputs = [
-    "Ranked Drilling Targets", "Resource Probability Scores", "Explainable Geological Insights"
+    { label: "Ranked Drilling Targets" },
+    { label: "Resource Probability Scores" },
+    { label: "Explainable Geological Insights" },
+    { label: "Exploration Risk Assessment" },
   ];
 
   return (
-    <section className="section-spacing relative">
+    <section className="py-[120px] relative">
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 50% 50%, rgba(31,79,255,0.06), transparent 60%)" }} />
-      <div className="container-tight relative">
+      <div className="max-w-[1200px] mx-auto px-5 sm:px-6 lg:px-8 relative">
         <motion.div className="text-center max-w-2xl mx-auto mb-16" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0}>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">The <span className="gradient-text">TerraForge</span> Solution</h2>
           <p className="text-muted-foreground text-lg">Our AI integrates multi-source earth observation data to predict mineral-rich zones with unprecedented accuracy.</p>
         </motion.div>
-        <div className="grid md:grid-cols-3 gap-8 items-start">
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-geo-blue uppercase tracking-wider mb-4">AI Integrates</h3>
-            {inputs.map((item, i) => (
-              <motion.div key={item} className="glass-card p-4 flex items-center gap-3" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
-                <Layers size={16} className="text-geo-blue shrink-0" />
-                <span className="text-sm font-medium">{item}</span>
-              </motion.div>
-            ))}
-          </div>
-          <div className="flex items-center justify-center py-8">
-            <div className="w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center border border-border/50">
-              <Brain size={32} className="text-forge-orange" />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-20 items-center">
+          {/* Left Column - AI Integrates */}
+          <motion.div 
+            className="space-y-4"
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true }} 
+            variants={fadeUp} 
+            custom={1}
+          >
+            <h3 className="text-sm font-semibold text-geo-blue uppercase tracking-wider mb-6 text-center md:text-left">AI Integrates</h3>
+            <div className="space-y-4">
+              {inputs.map((item, i) => (
+                <motion.div 
+                  key={item.label} 
+                  className="glass-card p-4 flex items-center gap-3"
+                  initial="hidden" 
+                  whileInView="visible" 
+                  viewport={{ once: true }} 
+                  variants={fadeUp} 
+                  custom={i + 2}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-geo-blue/10 flex items-center justify-center shrink-0">
+                    <item.icon size={16} className="text-geo-blue" />
+                  </div>
+                  <span className="text-sm font-medium">{item.label}</span>
+                </motion.div>
+              ))}
             </div>
-          </div>
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-forge-orange uppercase tracking-wider mb-4">Outputs</h3>
-            {outputs.map((item, i) => (
-              <motion.div key={item} className="glass-card p-4 flex items-center gap-3" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}>
-                <Check size={16} className="text-forge-orange shrink-0" />
-                <span className="text-sm font-medium">{item}</span>
-              </motion.div>
-            ))}
-          </div>
+          </motion.div>
+
+          {/* Center Column - AI Engine Visual */}
+          <motion.div 
+            className="flex items-center justify-center py-8"
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true }} 
+            variants={fadeUp} 
+            custom={2}
+          >
+            <div className="relative">
+              {/* Outer glow ring */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-geo-blue/20 to-forge-orange/20 blur-xl animate-pulse" style={{ transform: "scale(1.5)" }} />
+              
+              {/* Animated rings */}
+              <div className="absolute inset-0 rounded-full border border-geo-blue/20 animate-ping" style={{ animationDuration: "3s" }} />
+              <div className="absolute inset-0 rounded-full border border-forge-orange/15 animate-ping" style={{ animationDuration: "4s", animationDelay: "1s" }} />
+              
+              {/* Main container */}
+              <div className="relative w-28 h-28 lg:w-32 lg:h-32 rounded-full bg-gradient-to-br from-secondary to-card flex items-center justify-center border border-border/50 shadow-lg">
+                {/* Inner glow */}
+                <div className="absolute inset-2 rounded-full bg-gradient-to-br from-geo-blue/10 to-forge-orange/10" />
+                
+                {/* Brain icon with glow */}
+                <div className="relative">
+                  <Brain size={40} className="text-forge-orange drop-shadow-lg" style={{ filter: "drop-shadow(0 0 8px rgba(255, 122, 26, 0.5))" }} />
+                </div>
+              </div>
+              
+              {/* Floating data points */}
+              <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-geo-blue animate-pulse" />
+              <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-forge-orange animate-pulse" style={{ animationDelay: "0.5s" }} />
+              <div className="absolute left-1/2 -translate-x-1/2 -top-4 w-2 h-2 rounded-full bg-geo-blue/70 animate-pulse" style={{ animationDelay: "1s" }} />
+              <div className="absolute left-1/2 -translate-x-1/2 -bottom-4 w-2 h-2 rounded-full bg-forge-orange/70 animate-pulse" style={{ animationDelay: "1.5s" }} />
+            </div>
+          </motion.div>
+
+          {/* Right Column - Outputs */}
+          <motion.div 
+            className="space-y-4"
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true }} 
+            variants={fadeUp} 
+            custom={3}
+          >
+            <h3 className="text-sm font-semibold text-forge-orange uppercase tracking-wider mb-6 text-center md:text-right">Outputs</h3>
+            <div className="space-y-4">
+              {outputs.map((item, i) => (
+                <motion.div 
+                  key={item.label} 
+                  className="glass-card p-4 flex items-center gap-3"
+                  initial="hidden" 
+                  whileInView="visible" 
+                  viewport={{ once: true }} 
+                  variants={fadeUp} 
+                  custom={i + 6}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-forge-orange/10 flex items-center justify-center shrink-0">
+                    <Check size={16} className="text-forge-orange" />
+                  </div>
+                  <span className="text-sm font-medium">{item.label}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>
