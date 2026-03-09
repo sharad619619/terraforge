@@ -25,22 +25,28 @@ export default function Product() {
             <p className="text-lg text-muted-foreground">An end-to-end AI-powered geospatial intelligence platform that transforms raw earth observation data into actionable mineral exploration insights.</p>
           </motion.div>
 
-          {/* Product mockup */}
-          <motion.div className="card-premium p-8 mb-16" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fade}>
-            <div className="rounded-lg bg-secondary/50 aspect-video relative overflow-hidden">
-              <div className="absolute inset-0 geo-grid opacity-30" />
-              <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, rgba(31,79,255,0.1), transparent 70%)" }} />
-              <div className="absolute top-6 left-6 glass-card px-4 py-2">
-                <p className="text-xs text-muted-foreground">Active Exploration Region</p>
-                <p className="text-sm font-semibold">Pilbara Basin, Western Australia</p>
-              </div>
-            </div>
+          {/* Platform Capabilities */}
+          <motion.div className="text-center mb-10" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fade}>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3">Platform Capabilities</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">TerraForge combines AI, geospatial intelligence, and exploration analytics into one integrated platform.</p>
           </motion.div>
 
-          {/* Modules */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {modules.map((m, i) => (
-              <motion.div key={m.title} className="glass-card-hover p-6" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fade} transition={{ delay: i * 0.1 }}>
+              <motion.div 
+                key={m.title} 
+                className="rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1"
+                style={{
+                  background: "rgba(17,24,39,0.85)",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                }}
+                initial="hidden" 
+                whileInView="visible" 
+                viewport={{ once: true }} 
+                variants={fade} 
+                transition={{ delay: i * 0.1 }}
+              >
                 <div className="w-10 h-10 rounded-lg bg-geo-blue/10 flex items-center justify-center mb-4">
                   <m.icon size={20} className="text-geo-blue" />
                 </div>
