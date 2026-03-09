@@ -14,7 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_runs: {
+        Row: {
+          created_at: string
+          dataset_id: string
+          id: string
+          result: Json | null
+          status: string
+          target_mineral: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dataset_id: string
+          id?: string
+          result?: Json | null
+          status?: string
+          target_mineral: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dataset_id?: string
+          id?: string
+          result?: Json | null
+          status?: string
+          target_mineral?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_runs_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      datasets: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size?: number
+          file_type: string
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prediction_zones: {
+        Row: {
+          analysis_run_id: string
+          classification: string
+          created_at: string
+          factors: Json
+          geojson: Json
+          id: string
+          probability: number
+          zone_id: string
+        }
+        Insert: {
+          analysis_run_id: string
+          classification: string
+          created_at?: string
+          factors?: Json
+          geojson?: Json
+          id?: string
+          probability: number
+          zone_id: string
+        }
+        Update: {
+          analysis_run_id?: string
+          classification?: string
+          created_at?: string
+          factors?: Json
+          geojson?: Json
+          id?: string
+          probability?: number
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prediction_zones_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          analysis_run_id: string
+          created_at: string
+          id: string
+          report_url: string | null
+          status: string
+        }
+        Insert: {
+          analysis_run_id: string
+          created_at?: string
+          id?: string
+          report_url?: string | null
+          status?: string
+        }
+        Update: {
+          analysis_run_id?: string
+          created_at?: string
+          id?: string
+          report_url?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_analysis_run_id_fkey"
+            columns: ["analysis_run_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
