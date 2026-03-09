@@ -389,23 +389,31 @@ export default function Platform() {
 
             <div className="grid grid-cols-2 gap-2">
               <div className="glass-card p-3 text-center">
-                <p className="text-[10px] text-muted-foreground">Zone</p>
-                <p className="text-sm font-bold">{selectedZone.zone_id}</p>
+                <p className="text-[10px] text-muted-foreground">Zone ID</p>
+                <p className="text-sm font-bold">{selectedZone.zone_id || "N/A"}</p>
+              </div>
+              <div className="glass-card p-3 text-center">
+                <p className="text-[10px] text-muted-foreground">State</p>
+                <p className="text-sm font-semibold">{selectedZone.state || "N/A"}</p>
+              </div>
+              <div className="glass-card p-3 text-center">
+                <p className="text-[10px] text-muted-foreground">Target Mineral</p>
+                <p className="text-sm font-semibold">{selectedZone.mineral || result?.target_mineral}</p>
               </div>
               <div className="glass-card p-3 text-center">
                 <p className="text-[10px] text-muted-foreground">Probability</p>
-                <p className={`text-lg font-bold ${selectedZone.classification === "High" ? "text-green-400" : selectedZone.classification === "Medium" ? "text-forge-orange" : "text-red-400"}`}>
-                  {(selectedZone.probability * 100).toFixed(1)}%
+                <p className={`text-lg font-bold ${getClassificationColor(selectedZone.classification || classifyProbability(Number(selectedZone.probability) || 0))}`}>
+                  {((Number(selectedZone.probability) || 0) * 100).toFixed(1)}%
                 </p>
               </div>
               <div className="glass-card p-3 text-center col-span-2">
-                <p className="text-[10px] text-muted-foreground">Target Mineral</p>
-                <p className="text-sm font-semibold">{result?.target_mineral}</p>
+                <p className="text-[10px] text-muted-foreground">Classification</p>
+                <p className="text-sm font-semibold">{selectedZone.classification || classifyProbability(Number(selectedZone.probability) || 0)} Probability</p>
               </div>
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-2">Feature Importance</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Feature Contribution</p>
               <ResponsiveContainer width="100%" height={140}>
                 <BarChart data={factorData} layout="vertical" margin={{ left: 0, right: 10 }}>
                   <XAxis type="number" domain={[0, 50]} tick={{ fontSize: 10, fill: "#AAB3C5" }} />
@@ -422,14 +430,12 @@ export default function Platform() {
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-2">Key Indicators</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Explanation</p>
               <ul className="space-y-1.5">
-                {[
-                  "Fault-line proximity detected",
-                  "Iron oxide spectral anomaly",
-                  "Terrain slope gradient favorable",
-                  "Historical deposit proximity match",
-                ].map((t, i) => (
+                {(Array.isArray(selectedZone.explanation) && selectedZone.explanation.length > 0
+                  ? selectedZone.explanation
+                  : ["High spectral anomaly and proximity to geological fault lines."]
+                ).map((t: string, i: number) => (
                   <li key={i} className="text-xs text-foreground/80 flex items-start gap-2">
                     <span className="mt-1 w-1.5 h-1.5 rounded-full bg-forge-orange shrink-0" />
                     {t}
