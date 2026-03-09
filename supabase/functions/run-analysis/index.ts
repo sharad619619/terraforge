@@ -6,7 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Seeded random for deterministic results based on input
 function seededRandom(seed: number) {
   let s = seed;
   return () => {
@@ -21,6 +20,45 @@ function hashStr(str: string): number {
     h = ((h << 5) - h + str.charCodeAt(i)) | 0;
   }
   return Math.abs(h);
+}
+
+function normalizeFactors(raw: any, seedKey: string) {
+  if (raw && typeof raw === "object") {
+    const terrain = Number(raw.terrain ?? raw.terrain_indicators ?? 0);
+    const spectral = Number(raw.spectral ?? raw.spectral_signals ?? 0);
+    const geology = Number(raw.geology ?? raw.geological ?? raw.geological_structure ?? 0);
+    const historical = Number(raw.historical ?? raw.historical_proximity ?? 0);
+    const sum = terrain + spectral + geology + historical;
+
+    if (sum > 0) {
+      return {
+        terrain: terrain / sum,
+        spectral: spectral / sum,
+        geology: geology / sum,
+        historical: historical / sum,
+      };
+    }
+  }
+
+  const rand = seededRandom(hashStr(seedKey));
+  const terrain = 0.18 + rand() * 0.2;
+  const geology = 0.2 + rand() * 0.18;
+  const spectral = 0.15 + rand() * 0.2;
+  const historical = 0.08 + rand() * 0.22;
+  const sum = terrain + geology + spectral + historical;
+
+  return {
+    terrain: terrain / sum,
+    spectral: spectral / sum,
+    geology: geology / sum,
+    historical: historical / sum,
+  };
+}
+
+function classifyProbability(probability: number) {
+  if (probability >= 0.75) return "High";
+  if (probability >= 0.4) return "Medium";
+  return "Low";
 }
 
 Deno.serve(async (req) => {
@@ -42,101 +80,152 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Create analysis run
+    const { data: dataset, error: dsErr } = await supabase
+      .from("datasets")
+      .select("id, file_path, name")
+      .eq("id", dataset_id)
+      .single();
+
+    if (dsErr || !dataset) {
+      throw new Error("Dataset not found");
+    }
+
+    const pathsFromDataset = String(dataset.file_path || "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+
+    const candidatePaths = [
+      ...(Array.isArray(file_paths) ? file_paths : []),
+      ...pathsFromDataset,
+    ];
+
+    const geojsonPath = candidatePaths.find((p: string) => /\.(geojson|json)$/i.test(p));
+
+    if (!geojsonPath) {
+      throw new Error("No GeoJSON/JSON dataset found. Please upload a GeoJSON file.");
+    }
+
+    const { data: geojsonFile, error: dlErr } = await supabase.storage
+      .from("datasets")
+      .download(geojsonPath);
+
+    if (dlErr || !geojsonFile) {
+      throw new Error("Failed to read uploaded GeoJSON dataset");
+    }
+
+    const rawText = await geojsonFile.text();
+    const parsed = JSON.parse(rawText);
+
+    if (!parsed || parsed.type !== "FeatureCollection" || !Array.isArray(parsed.features)) {
+      throw new Error("Uploaded file must be a valid GeoJSON FeatureCollection");
+    }
+
+    const validFeatures = parsed.features.filter((feature: any) => feature?.geometry && feature?.type === "Feature");
+
+    if (validFeatures.length === 0) {
+      throw new Error("GeoJSON contains no valid features with geometry");
+    }
+
     const { data: run, error: runErr } = await supabase
       .from("analysis_runs")
       .insert({ dataset_id, target_mineral, status: "processing" })
       .select()
       .single();
 
-    if (runErr) throw runErr;
+    if (runErr || !run) throw runErr;
 
-    // Generate simulated analysis results
-    const seed = hashStr(`${dataset_id}-${target_mineral}`);
-    const rand = seededRandom(seed);
+    const zones: any[] = [];
+    const geojsonFeatures: any[] = [];
 
-    // Base center around India
-    const baseLat = 20 + rand() * 8;
-    const baseLng = 78 + rand() * 8;
-    const zoneCount = 6 + Math.floor(rand() * 5);
+    for (let i = 0; i < validFeatures.length; i++) {
+      const feature = validFeatures[i];
+      const properties = feature.properties || {};
 
-    const zones = [];
-    const geojsonFeatures = [];
+      const zoneId = String(properties.zone_id || properties.id || `ZONE-${String(i + 1).padStart(2, "0")}`);
+      const state = String(properties.state || properties.region || "Unknown");
+      const mineral = String(properties.mineral || target_mineral);
 
-    for (let i = 0; i < zoneCount; i++) {
-      const terrain = 0.15 + rand() * 0.25;
-      const spectral = 0.1 + rand() * 0.2;
-      const geology = 0.15 + rand() * 0.25;
-      const historical = 1 - terrain - spectral - geology;
+      const incomingProbability = Number(properties.probability);
+      const factors = normalizeFactors(properties.factors, `${dataset_id}-${zoneId}-${i}`);
+      const computedProbability =
+        factors.geology * 0.35 +
+        factors.terrain * 0.25 +
+        factors.spectral * 0.2 +
+        factors.historical * 0.2;
 
-      const probability =
-        terrain * 0.35 +
-        spectral * 0.2 +
-        geology * 0.25 +
-        historical * 0.2 +
-        (rand() - 0.3) * 0.3;
+      const probability = Number.isFinite(incomingProbability)
+        ? Math.max(0, Math.min(1, incomingProbability))
+        : Math.max(0, Math.min(1, computedProbability));
 
-      const prob = Math.max(0.1, Math.min(0.98, probability + 0.3));
-      const classification = prob >= 0.75 ? "High" : prob >= 0.4 ? "Medium" : "Low";
+      const classification = classifyProbability(probability);
 
-      const cLat = baseLat + (rand() - 0.5) * 3;
-      const cLng = baseLng + (rand() - 0.5) * 3;
-      const size = 0.1 + rand() * 0.15;
-      const sides = 5 + Math.floor(rand() * 3);
-      const coords: [number, number][] = [];
-
-      for (let j = 0; j <= sides; j++) {
-        const angle = (j / sides) * Math.PI * 2;
-        const r = size * (0.7 + rand() * 0.3);
-        coords.push([cLng + Math.cos(angle) * r, cLat + Math.sin(angle) * r]);
-      }
-
-      const zoneId = `Z-${String.fromCharCode(65 + i)}${Math.floor(rand() * 90 + 10)}`;
+      const explanation = Array.isArray(properties.explanation)
+        ? properties.explanation
+        : properties.explanation
+          ? [String(properties.explanation)]
+          : [
+              "High spectral anomaly and proximity to geological fault lines.",
+              "Terrain and structural indicators align with known mineralization patterns.",
+            ];
 
       const zoneData = {
         zone_id: zoneId,
-        probability: Math.round(prob * 1000) / 1000,
+        state,
+        mineral,
+        probability: Math.round(probability * 1000) / 1000,
         classification,
+        explanation,
         factors: {
-          terrain: Math.round(terrain * 100) / 100,
-          spectral: Math.round(spectral * 100) / 100,
-          geology: Math.round(geology * 100) / 100,
-          historical: Math.round(Math.max(historical, 0.05) * 100) / 100,
+          terrain: Math.round(factors.terrain * 1000) / 1000,
+          spectral: Math.round(factors.spectral * 1000) / 1000,
+          geology: Math.round(factors.geology * 1000) / 1000,
+          historical: Math.round(factors.historical * 1000) / 1000,
         },
       };
 
       zones.push(zoneData);
 
-      // Save to DB
       await supabase.from("prediction_zones").insert({
         analysis_run_id: run.id,
         zone_id: zoneId,
-        probability: prob,
+        probability,
         classification,
         factors: zoneData.factors,
-        geojson: { type: "Polygon", coordinates: [coords] },
+        geojson: {
+          type: "Feature",
+          geometry: feature.geometry,
+          properties: zoneData,
+        },
       });
 
       geojsonFeatures.push({
         type: "Feature",
-        properties: { ...zoneData, target_mineral },
-        geometry: { type: "Polygon", coordinates: [coords] },
+        geometry: feature.geometry,
+        properties: {
+          ...properties,
+          ...zoneData,
+          target_mineral: target_mineral,
+        },
       });
     }
 
     const geojson = { type: "FeatureCollection", features: geojsonFeatures };
 
-    // Update analysis run with results
     await supabase
       .from("analysis_runs")
       .update({
         status: "completed",
-        result: { region: "Analyzed Region", target_mineral, zones },
+        result: {
+          region: dataset.name || "Uploaded Dataset",
+          target_mineral,
+          zones,
+        },
       })
       .eq("id", run.id);
 
     const responseData = {
-      region: "Analyzed Region",
+      region: dataset.name || "Uploaded Dataset",
       target_mineral,
       zones: zones.sort((a, b) => b.probability - a.probability),
       geojson,
@@ -145,8 +234,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message || "Unexpected error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

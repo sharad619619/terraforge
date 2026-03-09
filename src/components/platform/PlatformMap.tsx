@@ -9,13 +9,18 @@ interface PlatformMapProps {
   onZoneClick: (properties: any) => void;
 }
 
-function getZoneColor(classification: string): string {
-  switch (classification) {
-    case "High": return "#22c55e";
-    case "Medium": return "#f97316";
-    case "Low": return "#ef4444";
-    default: return "#6b7280";
-  }
+function getZoneColor(probability?: number): string {
+  if (typeof probability !== "number") return "#ef4444";
+  if (probability >= 0.75) return "#22c55e";
+  if (probability >= 0.4) return "#f97316";
+  return "#ef4444";
+}
+
+function getProbabilityLabel(probability?: number): string {
+  if (typeof probability !== "number") return "Low";
+  if (probability >= 0.75) return "High";
+  if (probability >= 0.4) return "Medium";
+  return "Low";
 }
 
 export default function PlatformMap({ center, zoom, geojsonData, onZoneClick }: PlatformMapProps) {
@@ -32,51 +37,89 @@ export default function PlatformMap({ center, zoom, geojsonData, onZoneClick }: 
       zoomControl: true,
     });
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; OSM &copy; CARTO',
-      maxZoom: 18,
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
     }).addTo(map);
 
     mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || geojsonData) return;
     mapRef.current.flyTo(center, zoom, { duration: 1 });
-  }, [center, zoom]);
+  }, [center, zoom, geojsonData]);
 
   useEffect(() => {
     if (!mapRef.current) return;
+
     if (layerRef.current) {
       mapRef.current.removeLayer(layerRef.current);
       layerRef.current = null;
     }
+
     if (!geojsonData) return;
 
     const layer = L.geoJSON(geojsonData, {
-      style: (feature) => ({
-        fillColor: getZoneColor(feature?.properties?.classification || "Low"),
-        fillOpacity: 0.35,
-        color: getZoneColor(feature?.properties?.classification || "Low"),
-        weight: 2,
-        opacity: 0.8,
-      }),
+      style: (feature) => {
+        const p = Number(feature?.properties?.probability);
+        const color = getZoneColor(Number.isFinite(p) ? p : undefined);
+        return {
+          fillColor: color,
+          fillOpacity: 0.35,
+          color,
+          weight: 2,
+          opacity: 0.9,
+        };
+      },
       onEachFeature: (feature, featureLayer) => {
-        const p = feature.properties;
+        const p = feature.properties || {};
+        const probability = Number(p.probability);
+        const normalizedProbability = Number.isFinite(probability) ? probability : 0;
+        const classification = p.classification || getProbabilityLabel(normalizedProbability);
+
         featureLayer.bindTooltip(
-          `<strong>${p.zone_id}</strong><br/>${p.target_mineral}: ${(p.probability * 100).toFixed(1)}%`,
+          `<strong>${p.zone_id || "Zone"}</strong><br/>${p.mineral || p.target_mineral || "Mineral"}: ${(normalizedProbability * 100).toFixed(1)}%<br/>${classification} Probability`,
           { sticky: true }
         );
-        featureLayer.on("click", () => onZoneClick(p));
+
+        featureLayer.on("click", () => {
+          onZoneClick({
+            ...p,
+            probability: normalizedProbability,
+            classification,
+          });
+        });
       },
     });
 
     layer.addTo(mapRef.current);
     layerRef.current = layer;
 
-    try { mapRef.current.fitBounds(layer.getBounds(), { padding: [30, 30] }); } catch {}
+    try {
+      const bounds = layer.getBounds();
+      if (bounds.isValid()) {
+        mapRef.current.fitBounds(bounds, { padding: [24, 24] });
+      }
+    } catch {
+      // no-op
+    }
   }, [geojsonData, onZoneClick]);
 
-  return <div ref={containerRef} className="w-full h-full" style={{ minHeight: 400 }} />;
+  return (
+    <div className="relative w-full h-full" style={{ minHeight: 400 }}>
+      <div ref={containerRef} className="w-full h-full" />
+      <div className="absolute bottom-4 right-4 z-[500] rounded-md border border-border/70 bg-card/90 backdrop-blur px-3 py-2 text-[11px] space-y-1">
+        <p className="font-semibold text-foreground">Probability Legend</p>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: "#22c55e" }} /> High (&gt;=75%)</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: "#f97316" }} /> Medium (40–74%)</div>
+        <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: "#ef4444" }} /> Low (&lt;40%)</div>
+      </div>
+    </div>
+  );
 }
+

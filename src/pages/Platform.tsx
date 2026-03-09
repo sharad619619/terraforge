@@ -15,20 +15,67 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+interface ZoneFactors {
+  terrain: number;
+  spectral: number;
+  geology: number;
+  historical: number;
+}
+
+interface AnalysisZone {
+  zone_id: string;
+  state?: string;
+  mineral?: string;
+  probability: number;
+  classification: string;
+  explanation?: string[];
+  factors: ZoneFactors;
+}
+
 interface AnalysisResult {
   region: string;
   target_mineral: string;
-  zones: {
-    zone_id: string;
-    probability: number;
-    classification: string;
-    factors: { terrain: number; spectral: number; geology: number; historical: number };
-  }[];
+  zones: AnalysisZone[];
   geojson: any;
 }
 
 const ACCEPTED_TYPES = [".geojson", ".csv", ".tif", ".tiff", ".zip", ".json"];
-const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+
+function classifyProbability(probability: number): "High" | "Medium" | "Low" {
+  if (probability >= 0.75) return "High";
+  if (probability >= 0.4) return "Medium";
+  return "Low";
+}
+
+function getClassificationColor(classification: string): string {
+  if (classification === "High") return "text-emerald-400";
+  if (classification === "Medium") return "text-amber-400";
+  return "text-red-400";
+}
+
+function getNormalizedFactors(zone: any): ZoneFactors {
+  const raw = zone?.factors;
+
+  if (raw && typeof raw === "object") {
+    const terrain = Number(raw.terrain ?? 0);
+    const spectral = Number(raw.spectral ?? 0);
+    const geology = Number(raw.geology ?? 0);
+    const historical = Number(raw.historical ?? 0);
+    const sum = terrain + spectral + geology + historical;
+
+    if (sum > 0) {
+      return {
+        terrain: terrain / sum,
+        spectral: spectral / sum,
+        geology: geology / sum,
+        historical: historical / sum,
+      };
+    }
+  }
+
+  return { terrain: 0.31, geology: 0.28, spectral: 0.24, historical: 0.17 };
+}
 
 export default function Platform() {
   const [files, setFiles] = useState<File[]>([]);
@@ -43,7 +90,7 @@ export default function Platform() {
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
     const valid = newFiles.filter((f) => {
-      if (f.size > MAX_SIZE) { toast.error(`${f.name} exceeds 50MB limit`); return false; }
+      if (f.size > MAX_SIZE) { toast.error(`${f.name} exceeds 20MB limit`); return false; }
       const ext = "." + f.name.split(".").pop()?.toLowerCase();
       if (!ACCEPTED_TYPES.includes(ext)) { toast.error(`${f.name}: unsupported format`); return false; }
       return true;
@@ -55,6 +102,16 @@ export default function Platform() {
 
   const runAnalysis = useCallback(async () => {
     if (files.length === 0) { toast.error("Upload at least one dataset"); return; }
+
+    const geojsonFile = files.find((f) => {
+      const ext = "." + f.name.split(".").pop()?.toLowerCase();
+      return ext === ".geojson" || ext === ".json";
+    });
+
+    if (!geojsonFile) {
+      toast.error("Please include at least one GeoJSON/JSON file for map analysis");
+      return;
+    }
 
     setUploading(true);
     setAnalyzing(false);
@@ -140,14 +197,15 @@ export default function Platform() {
     toast.success("Report downloaded");
   }, [result]);
 
-  const factorData = selectedZone
-    ? [
-        { name: "Terrain", value: Math.round(selectedZone.factors.terrain * 100), color: "#22c55e" },
-        { name: "Spectral", value: Math.round(selectedZone.factors.spectral * 100), color: "#f97316" },
-        { name: "Geology", value: Math.round(selectedZone.factors.geology * 100), color: "#3b82f6" },
-        { name: "Historical", value: Math.round(selectedZone.factors.historical * 100), color: "#a855f7" },
-      ]
-    : [];
+  const selectedFactors = getNormalizedFactors(selectedZone);
+  const factorData = [
+    { name: "Terrain", value: Math.round(selectedFactors.terrain * 100), color: "#22c55e" },
+    { name: "Geology", value: Math.round(selectedFactors.geology * 100), color: "#3b82f6" },
+    { name: "Spectral", value: Math.round(selectedFactors.spectral * 100), color: "#f97316" },
+    { name: "Historical", value: Math.round(selectedFactors.historical * 100), color: "#a855f7" },
+  ];
+
+  const rankedZones = [...(result?.zones || [])].sort((a, b) => b.probability - a.probability);
 
   return (
     <Layout hideFooter>
@@ -174,7 +232,7 @@ export default function Platform() {
                   <input type="file" multiple accept={ACCEPTED_TYPES.join(",")} onChange={handleFileSelect} className="hidden" />
                   <Upload size={20} className="mx-auto mb-1 text-muted-foreground" />
                   <p className="text-xs text-muted-foreground">GeoJSON, CSV, TIFF, Shapefile (ZIP)</p>
-                  <p className="text-[10px] text-muted-foreground/60 mt-1">Max 50MB per file</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">Max 20MB per file</p>
                 </label>
 
                 {files.length > 0 && (
@@ -247,23 +305,22 @@ export default function Platform() {
                     <BarChart3 size={11} /> Ranked Zones
                   </p>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {result.zones
-                      .sort((a, b) => b.probability - a.probability)
-                      .map((z) => {
-                        const color = z.classification === "High" ? "text-green-400" : z.classification === "Medium" ? "text-forge-orange" : "text-red-400";
-                        return (
-                          <button
-                            key={z.zone_id}
-                            onClick={() => setSelectedZone(z)}
-                            className="w-full text-left rounded-md px-3 py-2 text-xs glass-card hover:bg-secondary/80 transition-colors"
-                          >
-                            <div className="flex justify-between">
-                              <span className="font-medium">{z.zone_id}</span>
-                              <span className={`font-bold ${color}`}>{(z.probability * 100).toFixed(1)}%</span>
-                            </div>
-                          </button>
-                        );
-                      })}
+                    {rankedZones.map((z) => {
+                      const classification = z.classification || classifyProbability(z.probability);
+                      const color = getClassificationColor(classification);
+                      return (
+                        <button
+                          key={z.zone_id}
+                          onClick={() => setSelectedZone(z)}
+                          className="w-full text-left rounded-md px-3 py-2 text-xs glass-card hover:bg-secondary/80 transition-colors"
+                        >
+                          <div className="flex justify-between">
+                            <span className="font-medium">{z.zone_id}</span>
+                            <span className={`font-bold ${color}`}>{(z.probability * 100).toFixed(1)}%</span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -332,23 +389,31 @@ export default function Platform() {
 
             <div className="grid grid-cols-2 gap-2">
               <div className="glass-card p-3 text-center">
-                <p className="text-[10px] text-muted-foreground">Zone</p>
-                <p className="text-sm font-bold">{selectedZone.zone_id}</p>
+                <p className="text-[10px] text-muted-foreground">Zone ID</p>
+                <p className="text-sm font-bold">{selectedZone.zone_id || "N/A"}</p>
+              </div>
+              <div className="glass-card p-3 text-center">
+                <p className="text-[10px] text-muted-foreground">State</p>
+                <p className="text-sm font-semibold">{selectedZone.state || "N/A"}</p>
+              </div>
+              <div className="glass-card p-3 text-center">
+                <p className="text-[10px] text-muted-foreground">Target Mineral</p>
+                <p className="text-sm font-semibold">{selectedZone.mineral || result?.target_mineral}</p>
               </div>
               <div className="glass-card p-3 text-center">
                 <p className="text-[10px] text-muted-foreground">Probability</p>
-                <p className={`text-lg font-bold ${selectedZone.classification === "High" ? "text-green-400" : selectedZone.classification === "Medium" ? "text-forge-orange" : "text-red-400"}`}>
-                  {(selectedZone.probability * 100).toFixed(1)}%
+                <p className={`text-lg font-bold ${getClassificationColor(selectedZone.classification || classifyProbability(Number(selectedZone.probability) || 0))}`}>
+                  {((Number(selectedZone.probability) || 0) * 100).toFixed(1)}%
                 </p>
               </div>
               <div className="glass-card p-3 text-center col-span-2">
-                <p className="text-[10px] text-muted-foreground">Target Mineral</p>
-                <p className="text-sm font-semibold">{result?.target_mineral}</p>
+                <p className="text-[10px] text-muted-foreground">Classification</p>
+                <p className="text-sm font-semibold">{selectedZone.classification || classifyProbability(Number(selectedZone.probability) || 0)} Probability</p>
               </div>
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-2">Feature Importance</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Feature Contribution</p>
               <ResponsiveContainer width="100%" height={140}>
                 <BarChart data={factorData} layout="vertical" margin={{ left: 0, right: 10 }}>
                   <XAxis type="number" domain={[0, 50]} tick={{ fontSize: 10, fill: "#AAB3C5" }} />
@@ -365,14 +430,12 @@ export default function Platform() {
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-2">Key Indicators</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Explanation</p>
               <ul className="space-y-1.5">
-                {[
-                  "Fault-line proximity detected",
-                  "Iron oxide spectral anomaly",
-                  "Terrain slope gradient favorable",
-                  "Historical deposit proximity match",
-                ].map((t, i) => (
+                {(Array.isArray(selectedZone.explanation) && selectedZone.explanation.length > 0
+                  ? selectedZone.explanation
+                  : ["High spectral anomaly and proximity to geological fault lines."]
+                ).map((t: string, i: number) => (
                   <li key={i} className="text-xs text-foreground/80 flex items-start gap-2">
                     <span className="mt-1 w-1.5 h-1.5 rounded-full bg-forge-orange shrink-0" />
                     {t}
